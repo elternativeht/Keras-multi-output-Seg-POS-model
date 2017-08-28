@@ -60,7 +60,8 @@ def TrainNetwork(SegModel,XArrayFileDir,SegArrayFileDir,POSArrayFileDir,batchsiz
                     for y_index2 in range(Y1arr.shape[1]):
                         if np.any(Y1arr[y_index1][y_index2]):
                             weight_y1[y_index1][y_index2]=1.0
-                        weight_y2[y_index1][y_index2]=1.0
+                        if np.any(Y2arr[y_index1][y_index2]):
+                            weight_y2[y_index1][y_index2]=1.0
                 SegModel.fit([Xarr],[Y1arr,Y2arr],epochs=1,batch_size=batchsize,verbose=1,validation_split=0.1,sample_weight=[weight_y1,weight_y2])
 
     
