@@ -19,7 +19,7 @@ def NetworkInit(POSNum,maxlength=60):
     model = Model(inputs=[SentenceVector], outputs=[Seg_Output,POS_Output])
     model.compile(optimizer='adam', loss='binary_crossentropy',loss_weights=[0.5,0.5],sample_weight_mode='temporal',metrics=['accuracy'])
     return model
-def TrainNetwork(SegModel,XArrayFileDir,SegArrayFileDir,POSArrayFileDir,batchsize,epochs,pad = True,maxlength=60):
+def TrainNetwork(SegModel,XArrayFileDir,SegArrayFileDir,POSArrayFileDir,batchsize,Tepochs,pad = True,maxlength=60):
     #we assume the Xarray has a shape (M,len,52)
     #SegArray has a shape (M,len,4) for (B,M,E,S)
     #POSArray has a shape (M,len,POSnum)
@@ -39,23 +39,30 @@ def TrainNetwork(SegModel,XArrayFileDir,SegArrayFileDir,POSArrayFileDir,batchsiz
         print("Current Directory File incomplete.\n")
         print("File validation check failed.\n")
         return -1
-    for i in range(x_filenum):
-        xarray = np.load('X'+str(i)+'.npy')
-        seg_array = np.load('Y1_'+str(i)+'.npy')
-        pos_array = np.load('Y2_'+str(i)+'.npy')
-        if pad:
-            xarray = pad_sequences(xarray,maxlen=maxlength,lenpadding='pre',truncating='pre',dtype='float32',value=0.0)
-            seg_array = pad_sequences(seg_array,maxlen=maxlength,padding='pre',truncating='pre',dtype='float32',value=0.0)
-            pos_array = pad_sequences(pos_array,maxlen=maxlength,padding='pre',truncating='pre',dtype='float32',value=0.0)
-        current_sample_number = xarray.shape[0]
-        sample_ptr = 0 
-        while sample_ptr + batchsize < current_sample_number:
-            Xarr = xarray[sample_ptr:sample_ptr+batchsize,:,:]
-            Y1arr = seg_array[sample_ptr:sample_ptr+batchsize,:,:]
-            Y2arr = pos_array[sample_ptr:sample_ptr+batchsize,:,:]
-            weight_y1 = np.zeros((Xarr.shape[0],Y1arr.shape[1]), dtype=int)
-            weight_y2 = np.zeros((Xarr.shape[0],Y2arr.shape[1]), dtype=int)
-            for 
+    for epoch_time in range(Tepochs):
+        for i in range(x_filenum):
+            xarray = np.load('X'+str(i)+'.npy')
+            seg_array = np.load('Y1_'+str(i)+'.npy')
+            pos_array = np.load('Y2_'+str(i)+'.npy')
+            if pad:
+                xarray = pad_sequences(xarray,maxlen=maxlength,lenpadding='pre',truncating='pre',dtype='float32',value=0.0)
+                seg_array = pad_sequences(seg_array,maxlen=maxlength,padding='pre',truncating='pre',dtype='float32',value=0.0)
+                pos_array = pad_sequences(pos_array,maxlen=maxlength,padding='pre',truncating='pre',dtype='float32',value=0.0)
+            current_sample_number = xarray.shape[0]
+            sample_ptr = 0 
+            while sample_ptr + batchsize < current_sample_number:
+                Xarr = xarray[sample_ptr:sample_ptr+batchsize,:,:]
+                Y1arr = seg_array[sample_ptr:sample_ptr+batchsize,:,:]
+                Y2arr = pos_array[sample_ptr:sample_ptr+batchsize,:,:]
+                weight_y1 = np.zeros((Xarr.shape[0],Y1arr.shape[1]), dtype=int)
+                weight_y2 = np.zeros((Xarr.shape[0],Y2arr.shape[1]), dtype=int)
+                for y_index1 in range(Y1arr.shape[0]):
+                    for y_index2 in range(Y1arr.shape[1]):
+                        if np.any(Y1arr[y_index1][y_index2]):
+                            weight_y1[y_index1][y_index2]=1.0
+                        weight_y2[y_index1][y_index2]=1.0
+                SegModel.fit([Xarr],[Y1arr,Y2arr],epochs=1,batch_size=batchsize,verbose=1,validation_split=0.1,sample_weight=[weight_y1,weight_y2])
+
     
 
 
